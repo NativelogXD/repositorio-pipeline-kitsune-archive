@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+coverage.xml
+junit-unit-results.xml
+htmlcov/
+.venv/
+mirai.pcap
+mirai.pcap.tsv
+
