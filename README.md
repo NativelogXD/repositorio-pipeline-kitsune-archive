@@ -1,6 +1,6 @@
 # Kitsune-py: Online Network Intrusion Detection System & CI/CD Testing Pipeline
 
-[![CI - Kitsune Static Analysis & Unit Tests](https://github.com/Gentleman-Programming/repositorio-pipeline-kitsune/actions/workflows/ci-unit-tests.yml/badge.svg)](.github/workflows/ci-unit-tests.yml)
+[![CI - Kitsune Static Analysis & Unit Tests](https://github.com/NativelogXD/repositorio-pipeline-kitsune/actions/workflows/ci-unit-tests.yml/badge.svg)](https://github.com/NativelogXD/repositorio-pipeline-kitsune/actions/workflows/ci-unit-tests.yml)
 [![Tests](https://img.shields.io/badge/Unit%20Tests-42%20passed-brightgreen.svg)](tests/unit)
 [![Coverage](https://img.shields.io/badge/Coverage-95.19%25-brightgreen.svg)](tests/unit)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.14-blue.svg)](requirements.txt)
