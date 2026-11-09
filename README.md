@@ -1,7 +1,7 @@
 # Kitsune-py: Online Network Intrusion Detection System & CI/CD Testing Pipeline
 
 [![CI - Kitsune Static Analysis & Unit Tests](https://github.com/NativelogXD/repositorio-pipeline-kitsune/actions/workflows/ci-unit-tests.yml/badge.svg)](https://github.com/NativelogXD/repositorio-pipeline-kitsune/actions/workflows/ci-unit-tests.yml)
-[![Tests](https://img.shields.io/badge/Unit%20Tests-42%20passed-brightgreen.svg)](tests/unit)
+[![Tests](https://img.shields.io/badge/Unit%20Tests-44%20passed-brightgreen.svg)](tests/unit)
 [![Coverage](https://img.shields.io/badge/Coverage-95.19%25-brightgreen.svg)](tests/unit)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.14-blue.svg)](requirements.txt)
 [![Standard](https://img.shields.io/badge/Standard-IEEE%20829%20%2F%20ISO%2029119-orange.svg)](docs/)
@@ -102,8 +102,8 @@ pytest tests/unit \
 | `AfterImage.py` | `PU-05` | 291 | **98%** | 8 | ✅ PASS |
 | `netStat.py` | `PU-06` | 59 | **100%** | 4 | ✅ PASS |
 | `FeatureExtractor.py` | `PU-07` | 167 | **83%** | 4 | ✅ PASS |
-| `Kitsune.py` | `PU-08` | 11 | **100%** | 2 | ✅ PASS |
-| **Total Consolidado** | — | **727** | **95.19%** | **42** | **100% PASS** |
+| `Kitsune.py` | `PU-08` | 11 | **100%** | 4 | ✅ PASS |
+| **Total Consolidado** | — | **727** | **95.19%** | **44** | **100% PASS** |
 
 ---
 

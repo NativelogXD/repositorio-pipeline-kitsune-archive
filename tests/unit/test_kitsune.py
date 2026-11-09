@@ -89,3 +89,68 @@ class TestKitsuneFacade:
         # Llamada adicional tras agotar paquetes sigue devolviendo -1
         assert kitsune.proc_next_packet() == -1
 
+    def test_ut_kit_003_custom_hyperparameters_propagation(
+        self, synthetic_tsv_factory: Callable[[list[list[str]], str], Path]
+    ) -> None:
+        """UT-KIT-003: Verifica la propagacion correcta de hiperparametros lr y hidden_ratio al ensamble."""
+        rows: list[list[str]] = []
+        for idx in range(8):
+            rows.append([
+                f"{2000.0 + idx * 0.1:.1f}",
+                str(64 + (idx % 4) * 8),
+                "00:aa:bb:cc:dd:ee",
+                "11:22:33:44:55:66",
+                "10.0.0.1",
+                "10.0.0.2",
+                str(50000 + idx),
+                "80",
+                "", "", "", "", "", "", "", "", "", "", "",
+            ])
+
+        tsv_path = synthetic_tsv_factory(rows, "hyperparams_check.tsv")
+        custom_lr = 0.02
+        custom_hr = 0.5
+        kitsune = Kitsune(
+            file_path=str(tsv_path),
+            limit=8,
+            max_autoencoder_size=5,
+            FM_grace_period=2,
+            AD_grace_period=3,
+            learning_rate=custom_lr,
+            hidden_ratio=custom_hr,
+        )
+
+        assert kitsune.AnomDetector.lr == custom_lr
+        assert kitsune.AnomDetector.hr == custom_hr
+
+        # Procesar suficientes paquetes para que termine FM y se construyan los dA
+        for _ in range(5):
+            kitsune.proc_next_packet()
+
+        # Validar que los autoencoders instanciados en el ensamble hayan recibido los hiperparametros
+        assert len(kitsune.AnomDetector.ensembleLayer) > 0
+        for ae in kitsune.AnomDetector.ensembleLayer:
+            assert ae.params.lr == custom_lr
+            assert ae.params.hiddenRatio == custom_hr
+        assert kitsune.AnomDetector.outputLayer.params.lr == custom_lr
+        assert kitsune.AnomDetector.outputLayer.params.hiddenRatio == custom_hr
+
+    def test_ut_kit_004_empty_packet_stream_immediate_eof(
+        self, synthetic_tsv_factory: Callable[[list[list[str]], str], Path]
+    ) -> None:
+        """UT-KIT-004: Verifica la resiliencia y retorno seguro de EOF (-1) ante un flujo sin paquetes."""
+        tsv_path = synthetic_tsv_factory([], "empty_stream.tsv")
+        kitsune = Kitsune(
+            file_path=str(tsv_path),
+            limit=10,
+            max_autoencoder_size=10,
+            FM_grace_period=5,
+            AD_grace_period=5,
+        )
+
+        # Ante stream vacio, la primera llamada debe devolver centinela -1
+        assert kitsune.proc_next_packet() == -1
+        # Llamadas consecutivas deben mantenerse estables en -1 sin lanzar excepciones
+        assert kitsune.proc_next_packet() == -1
+
+

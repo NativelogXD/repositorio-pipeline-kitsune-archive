@@ -16,6 +16,8 @@ La clase `Kitsune` actúa como fachada principal del sistema, conectando la sali
 | :--- | :--- | :--- | :--- |
 | **`UT-KIT-001`** | `Kitsune.__init__()` | Inicialización con archivo `.tsv`, `limit=10, max_autoencoder_size=8, FM_grace_period=5, AD_grace_period=10`. | Verifica que `FE.get_num_features() == 100` y que `AnomDetector` reciba exactamente `n=100, m=8, FM_grace=5, AD_grace=10`. |
 | **`UT-KIT-002`** | `Kitsune.proc_next_packet()` | Secuencia de 15 paquetes en `.tsv` con `FM_grace=4, AD_grace=5`. | Primeros 10 paquetes retornan `0.0` (fases FM y AD); paquetes 11 a 15 retornan $\text{RMSE} > 0.0$ (fase de ejecución); llamada 16 y posteriores retornan `-1`. |
+| **`UT-KIT-003`** | `Kitsune.__init__()` & `proc_next_packet()` | Inicialización con `learning_rate=0.02` y `hidden_ratio=0.5`. Procesamiento hasta fase AD. | Verifica la propagación íntegra de `lr` y `hiddenRatio` a cada autoencoder `dA` del `ensembleLayer` y al `outputLayer`. |
+| **`UT-KIT-004`** | `Kitsune.proc_next_packet()` | Flujo sin paquetes (TSV vacío con cabecera de 19 columnas). | Retorno inmediato y estable del centinela `-1` (EOF) sin excepciones no controladas. |
 
 ## 4. Comando de Verificación
 ```powershell
