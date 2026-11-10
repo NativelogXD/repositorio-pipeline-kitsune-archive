@@ -1,0 +1,152 @@
+name: CI - Kitsune Static Analysis & Unit Tests (No Deploy)
+
+on:
+  push:
+    branches: [ "master", "main", "develop" ]
+  pull_request:
+    branches: [ "master", "main", "develop" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ============================================================================
+  # ETAPA 1: VALIDACION DE ENTORNO Y ANALISIS ESTATICO DE SINTAXIS (PRE-TEST)
+  # ============================================================================
+  static-validation:
+    name: "Stage 1 - Sintaxis y Auditoria Estatica"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio Kitsune-py
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar dependencias base
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Compilacion de bytecode y verificacion sintactica de modulos core
+        run: |
+          python -m py_compile Kitsune.py FeatureExtractor.py netStat.py AfterImage.py
+          python -m py_compile KitNET/__init__.py KitNET/utils.py KitNET/dA.py KitNET/corClust.py KitNET/KitNET.py
+
+      - name: Verificacion de importabilidad determinista de modulos
+        run: |
+          python -c "import Kitsune, FeatureExtractor, netStat, AfterImage; from KitNET import KitNET, corClust, dA, utils; print('Static import check OK')"
+
+  # ============================================================================
+  # ETAPA 2: EJECUCION DE PLANES DE PRUEBAS UNITARIAS Y COBERTURA (CORTE CI)
+  # Nota de Arquitectura: Este pipeline finaliza estrictamente en las Pruebas
+  # Unitarias. No incluye etapas de empaquetado de produccion ni Despliegue (CD).
+  # ============================================================================
+  unit-tests:
+    name: "Stage 2 - Pruebas Unitarias (Pytest + Coverage)"
+    needs: static-validation
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout del repositorio Kitsune-py
+        uses: actions/checkout@v4
+
+      - name: Configurar Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Instalar dependencias de pruebas unitarias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Ejecutar Plan Unitario 1 - KitNET/utils.py
+        run: pytest tests/unit/test_utils.py
+
+      - name: Ejecutar Plan Unitario 2 - KitNET/dA.py
+        run: pytest tests/unit/test_da.py
+
+      - name: Ejecutar Plan Unitario 3 - KitNET/corClust.py
+        run: pytest tests/unit/test_corclust.py
+
+      - name: Ejecutar Plan Unitario 4 - KitNET/KitNET.py
+        run: pytest tests/unit/test_kitnet.py
+
+      - name: Ejecutar Plan Unitario 5 - AfterImage.py
+        run: pytest tests/unit/test_afterimage.py
+
+      - name: Ejecutar Plan Unitario 6 - netStat.py
+        run: pytest tests/unit/test_netstat.py
+
+      - name: Ejecutar Plan Unitario 7 - FeatureExtractor.py
+        run: pytest tests/unit/test_feature_extractor.py
+
+      - name: Ejecutar Plan Unitario 8 - Kitsune.py
+        run: pytest tests/unit/test_kitsune.py
+
+      - name: Ejecutar Suite Unitaria Completa con Reporte de Cobertura
+        run: |
+          pytest tests/unit \
+            --cov=KitNET \
+            --cov=AfterImage \
+            --cov=netStat \
+            --cov=FeatureExtractor \
+            --cov=Kitsune \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --junitxml=junit-unit-results.xml \
+            --cov-fail-under=85
+
+      - name: Publicar Reportes de Pruebas Unitarias y Cobertura (Solo Evidencia CI)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-reports-py${{ matrix.python-version }}
+          path: |
+            coverage.xml
+            junit-unit-results.xml
+
+  # ============================================================================
+  # ETAPA 3 (COMENTADA / SIMULADA): PRUEBAS DE DESPLIEGUE Y SMOKE TESTS (CD)
+  # Nota: Por especificacion de ejecucion, el pipeline activo se detiene en
+  # 'unit-tests'. El siguiente bloque documenta y simula la etapa de pruebas
+  # de despliegue (Smoke Tests, Health Check del contenedor NIDS y validacion
+  # de artefacto en entorno Staging) sin ejecutarse en produccion.
+  # ============================================================================
+  # deployment-verification-simulated:
+  #   name: "Stage 3 (Simulated) - Pruebas de Despliegue y Smoke Test NIDS"
+  #   needs: unit-tests
+  #   if: false  # Deshabilitado intencionalmente: ejecucion activa solo hasta Pruebas Unitarias
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout del repositorio Kitsune-py
+  #       uses: actions/checkout@v4
+  #
+  #     - name: "[Simulado] Construccion de paquete distribuible (Wheel / Sdist)"
+  #       run: |
+  #         echo "Simulando empaquetado de Kitsune-NIDS v1.0.0..."
+  #         python setup.py --help
+  #
+  #     - name: "[Simulado] Despliegue en Entorno Efimero (Staging Gateway IoT)"
+  #       run: |
+  #         echo "Desplegando agente Kitsune en nodo Staging aislado..."
+  #
+  #     - name: "[Simulado] Pruebas de Humo post-despliegue (Deployment Smoke Test)"
+  #       run: |
+  #         python -c "from Kitsune import Kitsune; print('Smoke Test: Motor Kitsune operativo en Staging')"
+  #
+  #     - name: "[Simulado] Verificacion de Telemetria y Latencia (< 2 ms/paquete)"
+  #       run: |
+  #         echo "Verificacion de umbral de latencia y memoria O(1) completada: PASS"
+
+

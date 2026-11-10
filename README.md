@@ -1,102 +1,149 @@
-# Overview
-In this repository you will find a Python implementation of Kitsune; an online network intrusion detection system, based on an ensemble of autoencoders. From,
+# Kitsune-py: Online Network Intrusion Detection System & CI/CD Testing Pipeline
 
-*Yisroel Mirsky, Tomer Doitshman, Yuval Elovici, and Asaf Shabtai, "Kitsune: An Ensemble of Autoencoders for Online Network Intrusion Detection", Network and Distributed System Security Symposium 2018 (NDSS'18)*
+[![CI - Kitsune Static Analysis & Unit Tests](https://github.com/NativelogXD/repositorio-pipeline-kitsune/actions/workflows/ci-unit-tests.yml/badge.svg)](https://github.com/NativelogXD/repositorio-pipeline-kitsune/actions/workflows/ci-unit-tests.yml)
+[![Tests](https://img.shields.io/badge/Unit%20Tests-42%20passed-brightgreen.svg)](tests/unit)
+[![Coverage](https://img.shields.io/badge/Coverage-95.19%25-brightgreen.svg)](tests/unit)
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.14-blue.svg)](requirements.txt)
+[![Standard](https://img.shields.io/badge/Standard-IEEE%20829%20%2F%20ISO%2029119-orange.svg)](docs/)
 
-# What is Kitsune?
+> **Proyecto:** Kitsune-py (Online NIDS basado en un ensamble de autoencoders)  
+> **Asignatura:** Ingeniería de Software III  
+> **Alcance del Pipeline:** Análisis estático, suite completa de 42 pruebas unitarias deterministas y reporte de cobertura con Quality Gate en CI (sin CD de producción).
 
-Neural networks have become an increasingly popular solution for network intrusion detection systems (NIDS). Their capability of learning complex patterns and behaviors make them a suitable solution for differentiating between normal traffic and network attacks. However, a drawback of neural networks is the amount of resources needed to train them. Many network gateways and routers devices, which could potentially host an NIDS, simply do not have the memory or processing power to train and sometimes even execute such models. More importantly, the existing neural network solutions are trained in a supervised manner. Meaning that an expert must label the network traffic and update the model manually from time to time.
+---
 
-Kitsune is a novel ANN-based NIDS which is online, unsupervised, and efficient. A Kitsune, in Japanese folklore, is a mythical fox-like creature that has a number of tails, can mimic different forms, and whose strength increases with experience. Similarly, Kitsune has an ensemble of small neural networks (autoencoders), which are trained to mimic (reconstruct) network traffic patterns, and whose performance incrementally improves overtime. 
-	
-The architecture of Kitsune is illustrated in the figure below:
-* First, a feature extraction framework called *AfterImage* efficiently tracks the patterns of every network channel using damped incremental statisitcs, and extracts a feature vector for each packet. The vector captures the temporal context of the packet's channel and sender. 
-* Next, the features are mapped to the visible neurons of an ensemble of autoenoders (*KitNET* https://github.com/ymirsky/KitNET-py). 
-* Then, each autoencoder attempts to reconstruct the instance's features, and computes the reconstruction error in terms of root mean squared errors (RMSE). 
-* Finally, the RMSEs are forwarded to an output autoencoder, which acts as a non-linear voting mechanism for the ensemble. 
+## Estructura del Repositorio
 
-We note that while training \textbf{Kitsune}, no more than one instance is stored in memory at a time. Kitsune has one main parameter, which is the maximum number of inputs for any given autoencoder in the ensemble. This parameter is used to increase the algorithm's speed with a modest trade off in detection performance.
-	
-![An illustration of Kitsune's architecture](https://raw.githubusercontent.com/ymirsky/Kitsune-py/master/Kitsune_fig.png)
-
-	
-Some points about KitNET:
-* It is completely plug-and-play.
-* It is based on an unsupervised machine learning algorithm (it does not need label, just train it on *normal* data!)
-* Its efficiency can be scaled with its input parameter m: the maximal size of any autoencoder in the ensemble layer (smaller autoencoders are exponentially cheaper to train and execute)
-
-# Implimentation Notes: 
-
-* This python implimentation of Kitsune is **is not optimal** in terms of speed. To make Kitsune run as fast as described in the paper, the entire project must be cythonized, or implimented in C++
-* For an experimental AfterImage version, change the import line in netStat.py to use AfterImage_extrapolate.py, and change line 5 of FeatureExtractor.py to True (uses cython). This version uses Lagrange-based Polynomial extrapolation to assit in computing the correlation based features.
-* We also require the scapy library for parsing (tshark [Wireshark] is default).
-* The source code has been tested with Anaconda 3.6.3 on a Windows 10 64bit machine.
-
-To install scapy, run in the terminal:
-```
-pip install scapy
-```
- 
-
-
-# Using The Code
-Here is a simple example of how to make a Kitsune object:
-```
-from Kitsune import *
-
-
-# KitNET params:
-maxAE = 10 #maximum size for any autoencoder in the ensemble layer
-FMgrace = 5000 #the number of instances taken to learn the feature mapping (the ensemble's architecture)
-ADgrace = 50000 #the number of instances used to train the anomaly detector (ensemble itself)
-packet_limit = np.Inf #the number of packets from the input file to process
-path = "../../captured.pcap" #the pcap, pcapng, or tsv file which you wish to process.
-
-# Build Kitsune
-K = Kitsune(path,packet_limit,maxAE,FMgrace,ADgrace)
-```
-
-You can also configure the learning rate and hidden layer's neuron ratio via Kitsune's contructor.
-
-The input file can be any pcap network capture. When the object is created, the code check whether or not you have tshark (Wireshark) installed. If you do, then it uses tshark to parse the pcap into a tsv file which is saved to disk locally. This file is then later used when running Kitnet. You can also load this tsv file instead of the origional pcap to save time. Note that we currently only look for tshark in the Windows directory "C:\Program Files\Wireshark\tshark.exe"
-
-If tshark is not found, then the scapy packet parsing library is used. Scapy is significatly slower than using wireshark/tsv...
-
-To use the Kitsune object, simply tell Kitsune to process the next packet. After processing a packet, Kitsune returns the RMSE value of the packet (zero during the FM featuremapping and AD grace periods).
-
-Here is an example usage of the Kitsune object:
-```
-while True: 
-    rmse = K.proc_next_packet() #will train during the grace periods, then execute on all the rest.
-    if rmse == -1:
-        break
-    print(rmse)
+```text
+repositorio-pipeline-kitsune/
+├── .github/
+│   └── workflows/
+│       └── ci-unit-tests.yml        # Pipeline CI en GitHub Actions (Matrix Python 3.11/3.12)
+├── KitNET/                          # Ensamble de autoencoders y clustering
+│   ├── __init__.py
+│   ├── KitNET.py                    # Orquestador del ensamble
+│   ├── corClust.py                  # Clustering incremental de correlación
+│   ├── dA.py                        # Denoising Autoencoder
+│   └── utils.py                     # Activaciones, distribuciones y buffer circular
+├── docs/                            # Documentación académica y técnica completa
+│   ├── 01_ANALISIS_PROYECTO_KITSUNE.md
+│   ├── 02_PLAN_GENERAL_PRUEBAS_Y_PIPELINE_CI.md
+│   ├── 03_PLANES_ESPECIFICOS_PRUEBAS_UNITARIAS.md
+│   ├── kitsune-pruebas.md           # Informe consolidado unificado
+│   ├── kitsune-pruebas.docx         # Documento Word formateado para entrega
+│   └── planes_unitarios/            # Fichas individuales PU-01 a PU-08
+│       ├── PU_01_KitNET_utils.md
+│       ├── PU_02_KitNET_dA.md
+│       ├── PU_03_KitNET_corClust.md
+│       ├── PU_04_KitNET_Orquestador.md
+│       ├── PU_05_AfterImage.md
+│       ├── PU_06_netStat.md
+│       ├── PU_07_FeatureExtractor.md
+│       └── PU_08_Kitsune_Facade.md
+├── tests/                           # Suite de pruebas unitarias (IEEE 829 / ISO 29119)
+│   ├── conftest.py                  # Fixtures deterministas y generador de tráfico TSV
+│   └── unit/                        # 42 casos de prueba (PU-01 a PU-08)
+│       ├── test_afterimage.py
+│       ├── test_corclust.py
+│       ├── test_da.py
+│       ├── test_feature_extractor.py
+│       ├── test_kitnet.py
+│       ├── test_kitsune.py
+│       ├── test_netstat.py
+│       └── test_utils.py
+├── AfterImage.py                    # Motor estadístico incremental amortiguado 1D/2D
+├── FeatureExtractor.py              # Extractor de paquetes (TSV / Scapy)
+├── Kitsune.py                       # Fachada principal del detector NIDS
+├── netStat.py                       # Gestor de estadísticas multiperspectiva (100 features)
+├── example.py                       # Demostración del flujo con Mirai botnet
+├── mirai.zip                        # Captura de paquetes de red para pruebas
+├── pytest.ini                       # Configuración de ejecución de pytest
+├── requirements.txt                 # Dependencias de producción
+├── requirements-dev.txt             # Dependencias de desarrollo y testing
+└── setup.py                         # Configuración de empaquetado del módulo
 ```
 
+---
 
-# Demo Code
-As a quick start, a demo script is provided in example.py. In the demo, we run Kitsune on a network capture of the Mirai malware. You can either run it directly or enter the following into your python console
+## Ejecución Local de Pruebas Unitarias
+
+### 1. Instalación de dependencias
+```bash
+pip install -r requirements-dev.txt
 ```
-import example.py
+
+### 2. Ejecutar la suite completa de pruebas unitarias (42 casos)
+```bash
+pytest tests/unit -v
 ```
 
+### 3. Ejecutar pruebas con reporte de cobertura de código
+```bash
+pytest tests/unit \
+  --cov=KitNET \
+  --cov=AfterImage \
+  --cov=netStat \
+  --cov=FeatureExtractor \
+  --cov=Kitsune \
+  --cov-report=term-missing \
+  --cov-fail-under=85
+```
 
-The code was written and with the Python environment Anaconda: https://anaconda.org/anaconda/python
-For significant speedups, as shown in our paper, you must implement Kitsune in C++, or entirely using cython.
+---
 
-# Full Datasets
-The full datasets used in our NDSS paper can be found by following this google drive link:
-https://goo.gl/iShM7E
+## Resumen de Cobertura y Métricas de Calidad
 
-# License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+| Módulo Bajo Prueba | Plan Unitario | Sentencias | Cobertura | Casos | Estado |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| `KitNET/utils.py` | `PU-01` | 35 | **100%** | 9 | ✅ PASS |
+| `KitNET/dA.py` | `PU-02` | 65 | **100%** | 6 | ✅ PASS |
+| `KitNET/corClust.py` | `PU-03` | 37 | **100%** | 5 | ✅ PASS |
+| `KitNET/KitNET.py` | `PU-04` | 61 | **100%** | 4 | ✅ PASS |
+| `AfterImage.py` | `PU-05` | 291 | **98%** | 8 | ✅ PASS |
+| `netStat.py` | `PU-06` | 59 | **100%** | 4 | ✅ PASS |
+| `FeatureExtractor.py` | `PU-07` | 167 | **83%** | 4 | ✅ PASS |
+| `Kitsune.py` | `PU-08` | 11 | **100%** | 2 | ✅ PASS |
+| **Total Consolidado** | — | **727** | **95.19%** | **42** | **100% PASS** |
 
+---
 
-# Citations
-If you use the source code, the datasets, or implement KitNET, please cite the following paper:
+## Arquitectura del Pipeline CI en GitHub Actions
 
-*Yisroel Mirsky, Tomer Doitshman, Yuval Elovici, and Asaf Shabtai, "Kitsune: An Ensemble of Autoencoders for Online Network Intrusion Detection", Network and Distributed System Security Symposium 2018 (NDSS'18)*
+El archivo [`.github/workflows/ci-unit-tests.yml`](.github/workflows/ci-unit-tests.yml) implementa dos etapas automatizadas:
 
-Yisroel Mirsky
-yisroel@post.bgu.ac.il
+```mermaid
+flowchart LR
+    A["Push / Pull Request\n(master, main, develop)"] --> B["Stage 1: static-validation\n- Compilación Bytecode (py_compile)\n- Importabilidad determinista"]
+    B --> C["Stage 2: unit-tests (Matrix Python 3.11, 3.12)\n- 8 Planes Unitarios (42 tests)\n- Cobertura >= 85%\n- Publicación JUnit + Coverage XML"]
+    C --> D["Quality Gate Aprobado\n(FIN DEL PIPELINE - SIN CD)"]
+```
 
+---
+
+# Descripción Científica Original de Kitsune
+
+Kitsune es un NIDS no supervisado, online y eficiente basado en redes neuronales profundas (NDSS 2018):
+* *Yisroel Mirsky, Tomer Doitshman, Yuval Elovici, and Asaf Shabtai, "Kitsune: An Ensemble of Autoencoders for Online Network Intrusion Detection", Network and Distributed System Security Symposium 2018 (NDSS'18)*
+
+### Arquitectura Técnica de Kitsune:
+1. **AfterImage:** Extrae estadísticas temporales amortiguadas de cada canal de red con decaimiento exponencial ($O(1)$ por paquete).
+2. **corClust:** Agrupa características correlacionadas mediante clustering jerárquico incremental.
+3. **KitNET:** Ensamble de autoencoders pequeños que reconstruyen las características y calculan errores de reconstrucción (RMSE).
+4. **Output Layer:** Autoencoder de salida que actúa como mecanismo de votación no lineal para emitir el score de anomalía final.
+
+![Arquitectura de Kitsune](Kitsune_fig.png)
+
+---
+
+## Licencia y Citación
+
+* Licencia MIT - consultar el archivo [LICENSE](LICENSE).
+* Para citar el trabajo académico:
+  ```bibtex
+  @inproceedings{mirsky2018kitsune,
+    title={Kitsune: An Ensemble of Autoencoders for Online Network Intrusion Detection},
+    author={Mirsky, Yisroel and Doitshman, Tomer and Elovici, Yuval and Shabtai, Asaf},
+    booktitle={Network and Distributed System Security Symposium (NDSS)},
+    year={2018}
+  }
+  ```
